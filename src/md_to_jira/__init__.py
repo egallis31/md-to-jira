@@ -1,6 +1,14 @@
 """Markdown to JIRA and Confluence Markup Syntax Converter."""
 
-__version__ = "1.0.0"
+try:
+    from importlib.metadata import version, PackageNotFoundError
+    try:
+        __version__ = version("md-to-jira")
+    except PackageNotFoundError:
+        __version__ = "0.0.0.dev0"  # Package not installed
+except ImportError:
+    # Python < 3.8
+    __version__ = "0.0.0.dev0"
 
 from .md_to_jira import (
     convert_line as md_convert_line,
