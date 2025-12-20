@@ -187,6 +187,10 @@ pip install -e .
 ### Building the Package
 
 ```bash
+# Optional: Create and activate a virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 # Install build tools
 pip install build
 
