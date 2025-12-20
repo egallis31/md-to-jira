@@ -6,7 +6,7 @@ import unittest
 from io import StringIO
 from unittest.mock import patch
 
-from jira_to_md import (convert_line, convert_multiline_elements,
+from md2jira.jira_to_md import (convert_line, convert_multiline_elements,
                         jira_to_markdown, process_code_block)
 
 
