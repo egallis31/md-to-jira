@@ -4,7 +4,7 @@
 
 This repository contains Python utilities for converting between GitHub-flavored Markdown and Atlassian's JIRA/Confluence markup syntax. The project is intentionally designed to be **self-contained with no external dependencies** (other than build tools) to remain simple and portable.
 
-The package is published to PyPI as `md2jira` and can be installed via pip. It provides both command-line tools and a Python API for programmatic use.
+The package is published to PyPI as `md-to-jira` and can be installed via pip. It provides both command-line tools and a Python API for programmatic use.
 
 ## Key Principles
 
@@ -34,7 +34,7 @@ The package is published to PyPI as `md2jira` and can be installed via pip. It p
 ## File Structure
 
 ### Source Code
-- `src/md2jira/` - Main package directory
+- `src/md_to_jira/` - Main package directory
   - `__init__.py` - Package exports and API
   - `md_to_jira.py` - Converts Markdown to JIRA/Confluence markup
   - `jira_to_md.py` - Converts JIRA/Confluence markup to Markdown
@@ -59,12 +59,16 @@ The package is published to PyPI as `md2jira` and can be installed via pip. It p
 
 ### Running Tests
 ```bash
-# Run all tests (with PYTHONPATH set to src for package imports)
-PYTHONPATH=src python3 -m unittest discover -s . -p "test_*.py" -v
+# Recommended: Install the package and run tests from /tmp to avoid import conflicts
+python3 -m build
+python3 -m pip install dist/md_to_jira-*.whl --force-reinstall
+cp test_*.py /tmp/
+cd /tmp && python3 -m unittest test_md_to_jira test_jira_to_md -v
 
-# Run specific test file
-PYTHONPATH=src python3 -m unittest test_md_to_jira.py -v
-PYTHONPATH=src python3 -m unittest test_jira_to_md.py -v
+# Alternative: Run with PYTHONPATH (may have conflicts with legacy scripts in development)
+# Note: The legacy md_to_jira.py script in the root can shadow the md_to_jira package
+# during development, causing import errors. Use the method above for reliable testing.
+PYTHONPATH=src python3 -m unittest discover -s . -p "test_*.py" -v
 ```
 
 ### Test Framework
@@ -109,7 +113,7 @@ Legacy scripts in the root directory (`md_to_jira.py` and `jira_to_md.py`) remai
 The package exports functions for programmatic use:
 
 ```python
-from md2jira import (
+from md_to_jira import (
     # Markdown → JIRA functions
     md_convert_line,
     md_convert_multiline_elements,
@@ -130,17 +134,17 @@ from md2jira import (
 
 ### Adding New Markdown/JIRA Syntax Support
 
-1. **Edit the source files** in `src/md2jira/` directory (not the root legacy scripts)
+1. **Edit the source files** in `src/md_to_jira/` directory (not the root legacy scripts)
 2. **For simple inline elements**: Add regex patterns to `convert_line()` function
 3. **For multiline elements**: Add regex patterns to `convert_multiline_elements()` function
 4. **Handle code blocks carefully**: Use the `in_code_block` flag to avoid converting content inside code blocks
 5. **Order matters**: More specific patterns should be processed before general ones
 6. **Add tests**: Write unit tests for the new syntax in the appropriate test file
-7. **Update version**: Increment version in both `pyproject.toml` and `src/md2jira/__init__.py`
+7. **Update version**: Increment version in both `pyproject.toml` and `src/md_to_jira/__init__.py`
 
 ### Modifying Existing Conversions
 
-1. **Edit source files** in `src/md2jira/` (not root scripts)
+1. **Edit source files** in `src/md_to_jira/` (not root scripts)
 2. Check if the conversion happens in `convert_line()` or `convert_multiline_elements()`
 3. Update the regex pattern carefully
 4. Update or add corresponding unit tests
@@ -153,7 +157,7 @@ from md2jira import (
 - ❌ Do not use Python features newer than 3.6 (f-strings are acceptable as they were introduced in Python 3.6)
 - ❌ Do not break the command-line interface compatibility
 - ❌ Do not break the package API exports
-- ❌ Do not make changes only to root legacy scripts - always update `src/md2jira/` first
+- ❌ Do not make changes only to root legacy scripts - always update `src/md_to_jira/` first
 
 ## What TO Do
 
@@ -164,7 +168,7 @@ from md2jira import (
 - ✅ Maintain backward compatibility with existing CLI and API usage
 - ✅ Update documentation (README.md) when adding new features
 - ✅ Test code blocks carefully - they shouldn't have their content converted
-- ✅ Edit source files in `src/md2jira/` for all code changes
+- ✅ Edit source files in `src/md_to_jira/` for all code changes
 - ✅ Update package exports in `__init__.py` when adding new functions
 - ✅ Keep version numbers in sync between `pyproject.toml` and `__init__.py`
 
@@ -204,7 +208,7 @@ python -m build
 
 ```bash
 # Install from PyPI
-pip install md2jira
+pip install md-to-jira
 
 # Use command-line tools
 md2jira <markdown_file>
@@ -219,12 +223,12 @@ python3 jira_to_md.py <jira_file>
 
 ### Package Configuration
 - **Build system**: `hatchling` (specified in `pyproject.toml`)
-- **Package name**: `md2jira` (published to PyPI)
-- **Version**: Maintained in both `pyproject.toml` and `src/md2jira/__init__.py`
+- **Package name**: `md-to-jira` (published to PyPI)
+- **Version**: Maintained in both `pyproject.toml` and `src/md_to_jira/__init__.py`
 - **Entry points**: `md2jira` and `jira2md` command-line scripts
 
 ### Release Process
-1. Update version in `pyproject.toml` and `src/md2jira/__init__.py`
+1. Update version in `pyproject.toml` and `src/md_to_jira/__init__.py`
 2. Update CHANGELOG or release notes if applicable
 3. Create a GitHub release with a tag (e.g., `v1.0.0`)
 4. GitHub Actions workflow automatically builds and publishes to PyPI
@@ -232,7 +236,7 @@ python3 jira_to_md.py <jira_file>
 ### Distribution Files
 - `.gitignore` excludes build artifacts: `dist/`, `build/`, `*.egg-info/`, `__pycache__/`
 - Source distribution (sdist) includes: `src/`, `test_*.py`, `README.md`, `LICENSE`
-- Wheel distribution packages the `md2jira` package from `src/`
+- Wheel distribution packages the `md_to_jira` package from `src/`
 
 ## Feature Roadmap
 
