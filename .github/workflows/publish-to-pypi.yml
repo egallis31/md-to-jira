@@ -16,6 +16,7 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history needed for hatch-vcs version detection
+        ref: ${{ github.ref }}  # Checkout the release tag, not default branch
     
     - name: Set up Python
       uses: actions/setup-python@v5
