@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "md2jira"
 version = "1.0.0"
-description = "Simple Python utilities for converting from Github-flavored Markdown syntax to Atlassian's custom markup syntax, and vice-versa"
+description = "Simple Python utilities for converting from GitHub-flavored Markdown syntax to Atlassian's custom markup syntax, and vice-versa"
 readme = "README.md"
 requires-python = ">=3.6"
 license = {file = "LICENSE"}
@@ -39,8 +39,11 @@ Issues = "https://github.com/eshack94/md-to-jira/issues"
 md2jira = "md2jira.md_to_jira:main"
 jira2md = "md2jira.jira_to_md:main"
 
+[tool.hatch.build]
+sources = ["src"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/md2jira"]
+packages = ["md2jira"]
 
 [tool.hatch.build.targets.sdist]
 include = [
