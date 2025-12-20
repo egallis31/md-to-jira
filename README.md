@@ -18,18 +18,36 @@ It is also designed to be easily extensible, so that it can be easily modified t
 
 ## Installation
 
-Clone this repository. There are no external dependencies, so no pip installation is required, and no virtual environment is needed.
+### Using pip (recommended)
 
-It's recommended to add this script to your `PATH` environment variable, so that it can be run from anywhere. 
-
-You could alternatively add it to a `~/scripts/` directory and create a `md_to_jira` alias for it by adding the following line to your `~/.bashrc`, `~/.zshrc`, or `~/.profile` file:
+Install from PyPI using pip:
 
 ```bash
-alias md_to_jira="python3 ~/scripts/md_to_jira.py"
-alias jira_to_md="python3 ~/scripts/jira_to_md.py"
+pip install md2jira
 ```
 
-It can also be run directly from the cloned repository directory, but this is not recommended.
+The package will install two command-line tools:
+- `md2jira` - Convert Markdown to JIRA/Confluence markup
+- `jira2md` - Convert JIRA/Confluence markup to Markdown
+
+### From source
+
+Alternatively, you can clone this repository and install from source:
+
+```bash
+git clone https://github.com/eshack94/md-to-jira.git
+cd md-to-jira
+pip install .
+```
+
+### Legacy method (not recommended)
+
+You can also clone the repository and run the scripts directly without installation, though this is not recommended:
+
+```bash
+python3 md_to_jira.py <file>
+python3 jira_to_md.py <file>
+```
 
 ## Usage and Examples
 
@@ -39,64 +57,64 @@ Below are usage instructions with some simple examples. For each item, the usage
 
 ```bash
 # Convert a markdown file to Jira/Confluence markup and print to stdout
-python3 md_to_jira.py <markdown_file>
-python3 md_to_jira.py README.md
+md2jira <markdown_file>
+md2jira README.md
 ```
 
 ```bash
 # Convert a markdown file to Jira/Confluence markup and save to a file
-python3 md_to_jira.py <markdown_file> > <jira_file>
-python3 md_to_jira.py README.md > README.jira
+md2jira <markdown_file> > <jira_file>
+md2jira README.md > README.jira
 ```
 
 ```bash
 # Convert a markdown file to Jira/Confluence markup and copy to clipboard (MacOS)
-python3 md_to_jira.py <markdown_file> | pbcopy
-python3 md_to_jira.py README.md | pbcopy
+md2jira <markdown_file> | pbcopy
+md2jira README.md | pbcopy
 ```
 
 ```bash
 # Convert a markdown file to Jira/Confluence markup and copy to clipboard (Linux)
-python3 md_to_jira.py <markdown_file | xclip -selection clipboard
-python3 md_to_jira.py README.md | xclip -selection clipboard
+md2jira <markdown_file> | xclip -selection clipboard
+md2jira README.md | xclip -selection clipboard
 ```
 
 ```bash
 # Convert a markdown file to Jira/Confluence markup and copy to clipboard (Windows)
-python3 md_to_jira.py <markdown_file | clip
-python3 md_to_jira.py README.md | clip
+md2jira <markdown_file> | clip
+md2jira README.md | clip
 ```
 
 ### Converting from JIRA/Confluence Markup Syntax to Markdown
 
 ```bash
 # Convert a Jira/Confluence markup file to markdown and print to stdout
-python3 jira_to_md.py <jira_file>
-python3 jira_to_md.py README.jira
+jira2md <jira_file>
+jira2md README.jira
 ```
 
 ```bash
 # Convert a Jira/Confluence markup file to markdown and save to a file
-python3 jira_to_md.py <jira_file> > <markdown_file>
-python3 jira_to_md.py README.jira > README.md
+jira2md <jira_file> > <markdown_file>
+jira2md README.jira > README.md
 ```
 
 ```bash
 # Convert a Jira/Confluence markup file to markdown and copy to clipboard (MacOS)
-python3 jira_to_md.py <jira_file> | pbcopy
-python3 jira_to_md.py README.jira | pbcopy
+jira2md <jira_file> | pbcopy
+jira2md README.jira | pbcopy
 ```
 
 ```bash
 # Convert a Jira/Confluence markup file to markdown and copy to clipboard (Linux)
-python3 jira_to_md.py <jira_file | xclip -selection clipboard
-python3 jira_to_md.py README.jira | xclip -selection clipboard
+jira2md <jira_file> | xclip -selection clipboard
+jira2md README.jira | xclip -selection clipboard
 ```
 
 ```bash
 # Convert a Jira/Confluence markup file to markdown and copy to clipboard (Windows)
-python3 jira_to_md.py <jira_file | clip
-python3 jira_to_md.py README.jira | clip
+jira2md <jira_file> | clip
+jira2md README.jira | clip
 ```
 
 ## Features (implemented and planned)
