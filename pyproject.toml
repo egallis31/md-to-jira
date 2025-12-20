@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatchling-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "md-to-jira"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Simple Python utilities for converting from GitHub-flavored Markdown syntax to Atlassian's custom markup syntax, and vice-versa"
 readme = "README.md"
 requires-python = ">=3.6"
@@ -52,3 +52,9 @@ include = [
     "/README.md",
     "/LICENSE",
 ]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/md_to_jira/_version.py"
