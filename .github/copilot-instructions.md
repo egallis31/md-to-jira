@@ -131,4 +131,4 @@ The README.md contains a feature roadmap. When implementing features from the ro
 1. Check the current status in README.md
 2. Follow the existing patterns for similar features
 3. Add comprehensive tests
-4. Update the roadmap checkboxes in README.md
+4. Update the task list checkboxes (`- [ ]` to `- [x]`) in README.md for completed features
