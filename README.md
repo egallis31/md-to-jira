@@ -23,7 +23,7 @@ It is also designed to be easily extensible, so that it can be easily modified t
 Install from PyPI using pip:
 
 ```bash
-pip install md2jira
+pip install md-to-jira
 ```
 
 The package will install two command-line tools:
