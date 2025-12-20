@@ -98,7 +98,7 @@ Both scripts are designed as command-line tools:
 ## What NOT to Do
 
 - ❌ Do not add external dependencies (no pip packages)
-- ❌ Do not use Python features newer than 3.6 (avoid f-strings if possible, though they're used in the codebase)
+- ❌ Do not use Python features newer than 3.6 (f-strings are acceptable as they were introduced in Python 3.6)
 - ❌ Do not add complex build systems or package managers
 - ❌ Do not make the code overly complex or add unnecessary abstractions
 - ❌ Do not break the command-line interface compatibility
