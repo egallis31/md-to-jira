@@ -130,3 +130,6 @@ dmypy.json
 
 # bak folder
 bak/
+
+# macOS
+.DS_Store

@@ -43,15 +43,38 @@ jira2md = "md_to_jira.jira_to_md:main"
 sources = ["src"]
 
 [tool.hatch.build.targets.wheel]
-packages = ["md_to_jira"]
+packages = ["src/md_to_jira"]
 
 [tool.hatch.build.targets.sdist]
 include = [
     "/src",
-    "/test_*.py",
+    "/tests",
     "/README.md",
     "/LICENSE",
 ]
 
 [tool.hatch.version]
 source = "vcs"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["src/md_to_jira"]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+]

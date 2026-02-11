@@ -123,6 +123,7 @@ jira2md README.jira | clip
 - [x] Add support for headers 1-6
 - [x] Add support for fenced code blocks
     - [x] Do not convert headers in fenced code blocks
+    - [x] Support language tags with hyphens (e.g., `html-erb`)
 - [x] Add support for indented code blocks
     - [x] Do not convert headers in indented code blocks
 - [x] Add support for inline code (backticks) - should be converted to JIRA's monospace syntax
@@ -130,25 +131,27 @@ jira2md README.jira | clip
 - [x] Add support for italic text
 - [x] Add support for strikethrough text
 - [x] Add support for unordered lists
-- [x] Add support for in-line style links
+- [x] Add support for ordered lists
+- [x] Add support for nested lists (both ordered and unordered)
+- [x] Add support for in-line style links (with optional title support - titles are stripped)
+- [x] Add support for reference-style links (`[text][ref]` and `[text][]`)
+- [x] Add support for images (with optional title support)
+- [x] Add support for horizontal rules
+- [x] Add support for blockquotes
+- [x] Add support for tables
+- [x] Add support for emojis (GitHub/Slack `:smile:` ↔ Jira `:)`, `(y)`, etc.)
 - [x] Add support for task lists
   * **Note**: Added, but this is not supported by JIRA native markup and requires a JIRA plugin to work
 - [x] Add `jira_to_md.py` to convert JIRA/Confluence markup to GitHub-flavored Markdown (GFM)
+- [x] Add unit tests for both `md_to_jira.py` and `jira_to_md.py` (71 tests passing)
+- [x] String-based API (`convert_content()`) in addition to file-based
 
 
 ### Feature Roadmap
-- [ ] Add support for tables
-- [ ] Add support for horizontal rules
-- [ ] Add support for ordered lists
-- [ ] Add support for blockquotes
-- [ ] Add support for images
-- [ ] Add support for emojis
-- [ ] Add support for in-line style links with titles (if possible)
-- [ ] Add support for reference style links
+- [x] Add support for emojis (GitHub/Slack style `:smile:` ↔ Jira `:)`, `(y)`, etc.)
+- [x] Add support for in-line style links with titles (titles are stripped since Jira doesn't support them)
+- [x] Add support for reference style links (`[text][ref]` and `[text][]`)
 - [ ] Add support for inline HTML
-- [ ] Add unit tests
-    - [ ] Add unit tests for `md_to_jira.py`
-    - [x] Add unit tests for `jira_to_md.py`
 - [ ] Maybe: Add argparse support for command line options
 - [ ] **_Other TBD_**
 
