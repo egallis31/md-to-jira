@@ -21,6 +21,8 @@ from .md_to_jira import (
     convert_emoji_md_to_jira,
     EMOJI_MD_TO_JIRA,
     markdown_to_jira,
+    FORMAT_MARKDOWN,
+    FORMAT_ATLASSIAN,
 )
 from .jira_to_md import convert_line as jira_convert_line
 from .jira_to_md import convert_inline as jira_convert_inline
@@ -39,6 +41,9 @@ convert_multiline_elements = md_convert_multiline_elements
 convert_content = md_convert_content
 
 __all__ = [
+    # Output format constants
+    "FORMAT_MARKDOWN",
+    "FORMAT_ATLASSIAN",
     # Markdown → Jira helpers (old and new, consistent names)
     "convert_line",
     "convert_inline",

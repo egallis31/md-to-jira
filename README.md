@@ -55,35 +55,65 @@ Below are usage instructions with some simple examples. For each item, the usage
 
 ### Converting from Markdown to JIRA/Confluence Markup Syntax
 
+The `md2jira` command supports two output formats:
+
+| Format | Flag | Description | Best For |
+|--------|------|-------------|----------|
+| **Markdown** | `-f markdown` | Preserves Markdown syntax | Jira Cloud, newer Confluence (native Markdown support) |
+| **Atlassian** | `-f atlassian` | Converts to Jira wiki markup | Jira Server, Data Center, older Confluence |
+
+#### Interactive Mode
+
+When you run `md2jira` without specifying a format, it will prompt you to choose:
+
 ```bash
-# Convert a markdown file to Jira/Confluence markup and print to stdout
-md2jira <markdown_file>
 md2jira README.md
+# Prompts: Select output format (1=Markdown, 2=Atlassian)
 ```
 
-```bash
-# Convert a markdown file to Jira/Confluence markup and save to a file
-md2jira <markdown_file> > <jira_file>
-md2jira README.md > README.jira
-```
+#### Specifying Output Format
 
 ```bash
-# Convert a markdown file to Jira/Confluence markup and copy to clipboard (MacOS)
-md2jira <markdown_file> | pbcopy
-md2jira README.md | pbcopy
+# Preserve Markdown syntax (for Jira Cloud with native Markdown support)
+md2jira README.md -f markdown
+
+# Convert to Atlassian Text Formatting Notation (for Jira Server/Data Center)
+md2jira README.md -f atlassian
 ```
 
-```bash
-# Convert a markdown file to Jira/Confluence markup and copy to clipboard (Linux)
-md2jira <markdown_file> | xclip -selection clipboard
-md2jira README.md | xclip -selection clipboard
-```
+#### Output to File or Clipboard
 
 ```bash
-# Convert a markdown file to Jira/Confluence markup and copy to clipboard (Windows)
-md2jira <markdown_file> | clip
-md2jira README.md | clip
+# Save to a file
+md2jira README.md -f markdown > README.jira
+
+# Copy to clipboard (macOS)
+md2jira README.md -f atlassian | pbcopy
+
+# Copy to clipboard (Linux)
+md2jira README.md -f atlassian | xclip -selection clipboard
+
+# Copy to clipboard (Windows)
+md2jira README.md -f atlassian | clip
 ```
+
+#### Format Conversion Reference
+
+| Markdown | Atlassian Notation |
+|----------|-------------------|
+| `# Header` | `h1. Header` |
+| `**bold**` | `*bold*` |
+| `*italic*` | `_italic_` |
+| `~~strike~~` | `-strike-` |
+| `` `code` `` | `{{code}}` |
+| `[text](url)` | `[text\|url]` |
+| `![alt](url)` | `!url\|alt=alt!` |
+| `- item` | `* item` |
+| `1. item` | `# item` |
+| `> quote` | `bq. quote` |
+| ` ```lang ` | `{code:lang}` |
+| `---` | `----` |
+| `\| header \|` | `\|\|header\|\|` |
 
 ### Converting from JIRA/Confluence Markup Syntax to Markdown
 
@@ -143,16 +173,21 @@ jira2md README.jira | clip
 - [x] Add support for task lists
   * **Note**: Added, but this is not supported by JIRA native markup and requires a JIRA plugin to work
 - [x] Add `jira_to_md.py` to convert JIRA/Confluence markup to GitHub-flavored Markdown (GFM)
-- [x] Add unit tests for both `md_to_jira.py` and `jira_to_md.py` (71 tests passing)
+- [x] Add unit tests for both `md_to_jira.py` and `jira_to_md.py` (82 tests passing)
 - [x] String-based API (`convert_content()`) in addition to file-based
+- [x] Dual output format: Markdown-preserving (for Jira Cloud) or Atlassian notation (for Jira Server)
+- [x] Interactive format selection prompt when no format flag is provided
+- [x] Command-line argument parsing with `-f`/`--format` option
 
 
 ### Feature Roadmap
 - [x] Add support for emojis (GitHub/Slack style `:smile:` ↔ Jira `:)`, `(y)`, etc.)
 - [x] Add support for in-line style links with titles (titles are stripped since Jira doesn't support them)
 - [x] Add support for reference style links (`[text][ref]` and `[text][]`)
+- [x] Add argparse support for command line options (`-f`/`--format`)
+- [x] Add interactive format selection prompt
+- [x] Add dual output format support (Markdown-preserving vs Atlassian notation)
 - [ ] Add support for inline HTML
-- [ ] Maybe: Add argparse support for command line options
 - [ ] **_Other TBD_**
 
 ### Housekeeping action items

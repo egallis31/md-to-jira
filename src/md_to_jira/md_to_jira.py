@@ -17,7 +17,12 @@
 
 import sys
 import re
-from typing import List, Tuple, Callable, Match, Dict
+import argparse
+from typing import List, Tuple, Callable, Match, Dict, Optional
+
+# Output format constants
+FORMAT_MARKDOWN = 'markdown'
+FORMAT_ATLASSIAN = 'atlassian'
 
 # GitHub/Slack style emoji to Jira emoticon mapping
 # Jira uses emoticons like :) :( :D etc. and some named ones
@@ -93,13 +98,17 @@ def convert_emoji_md_to_jira(text: str) -> str:
     return text
 
 
-def convert_inline(text: str) -> str:
+def convert_inline(text: str, output_format: str = FORMAT_MARKDOWN) -> str:
     """Convert inline markdown formatting using earliest-match approach.
     
     This processes patterns by finding the earliest match position,
     which correctly handles overlapping patterns like bold vs italic.
+    
+    Args:
+        text: The text to convert
+        output_format: Either FORMAT_MARKDOWN (preserve markdown) or FORMAT_ATLASSIAN (Jira wiki markup)
     """
-    def format_link(m: Match) -> str:
+    def format_link_md(m: Match) -> str:
         """Keep links in markdown format, just strip title if present."""
         text = m.group(1)
         url = m.group(2)
@@ -107,7 +116,15 @@ def convert_inline(text: str) -> str:
         url = re.sub(r'\s+["\'][^"\']*["\']$', '', url.strip())
         return f'[{text}]({url})'
     
-    def format_image(m: Match) -> str:
+    def format_link_atlassian(m: Match) -> str:
+        """Convert links to Atlassian format [text|url]."""
+        text = m.group(1)
+        url = m.group(2)
+        # Strip title if present
+        url = re.sub(r'\s+["\'][^"\']*["\']$', '', url.strip())
+        return f'[{text}|{url}]'
+    
+    def format_image_md(m: Match) -> str:
         """Keep images in markdown format, strip title if present."""
         alt = m.group(1)
         url = m.group(2)
@@ -115,16 +132,43 @@ def convert_inline(text: str) -> str:
         url = re.sub(r'\s+["\'][^"\']*["\']$', '', url.strip())
         return f'![{alt}]({url})'
     
-    # Since Jira/Confluence accepts markdown, we keep most formatting as-is
-    # Only normalize some edge cases
-    patterns: List[Tuple[str, Callable[[Match], str]]] = [
-        # Images - keep in markdown format, strip titles
-        (r'!\[([^\]]*)\]\(([^)]+)\)', format_image),
-        # Links - keep in markdown format, strip titles
-        (r'\[([^\]]+)\]\(([^)]+)\)', format_link),
-        # Normalize __bold__ to **bold** for consistency
-        (r'__(.+?)__', lambda m: f'**{m.group(1)}**'),
-    ]
+    def format_image_atlassian(m: Match) -> str:
+        """Convert images to Atlassian format !url!."""
+        alt = m.group(1)
+        url = m.group(2)
+        # Strip title if present
+        url = re.sub(r'\s+["\'][^"\']*["\']$', '', url.strip())
+        # Atlassian format: !url! or !url|alt=text!
+        if alt:
+            return f'!{url}|alt={alt}!'
+        return f'!{url}!'
+    
+    if output_format == FORMAT_ATLASSIAN:
+        patterns: List[Tuple[str, Callable[[Match], str]]] = [
+            # Images - convert to Atlassian !url! format
+            (r'!\[([^\]]*)\]\(([^)]+)\)', format_image_atlassian),
+            # Links - convert to Atlassian [text|url] format
+            (r'\[([^\]]+)\]\(([^)]+)\)', format_link_atlassian),
+            # Bold **text** or __text__ -> *text*
+            (r'\*\*(.+?)\*\*', lambda m: f'*{m.group(1)}*'),
+            (r'__(.+?)__', lambda m: f'*{m.group(1)}*'),
+            # Italic *text* or _text_ -> _text_ (but avoid matching bold)
+            (r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', lambda m: f'_{m.group(1)}_'),
+            # Strikethrough ~~text~~ -> -text-
+            (r'~~(.+?)~~', lambda m: f'-{m.group(1)}-'),
+            # Inline code `code` -> {{code}}
+            (r'`([^`]+)`', lambda m: f'{{{{{m.group(1)}}}}}'),
+        ]
+    else:
+        # Markdown-preserving mode
+        patterns = [
+            # Images - keep in markdown format, strip titles
+            (r'!\[([^\]]*)\]\(([^)]+)\)', format_image_md),
+            # Links - keep in markdown format, strip titles
+            (r'\[([^\]]+)\]\(([^)]+)\)', format_link_md),
+            # Normalize __bold__ to **bold** for consistency
+            (r'__(.+?)__', lambda m: f'**{m.group(1)}**'),
+        ]
     
     result = []
     remaining = text
@@ -156,23 +200,31 @@ def convert_inline(text: str) -> str:
     return convert_emoji_md_to_jira(''.join(result))
 
 
-def convert_table_row(line: str, is_header: bool = False) -> str:
-    """Convert inline formatting within a markdown table row, keeping markdown table structure.
+def convert_table_row(line: str, is_header: bool = False, output_format: str = FORMAT_MARKDOWN) -> str:
+    """Convert a markdown table row.
     
     Args:
         line: The markdown table row (e.g., "| col1 | col2 |")
-        is_header: Ignored - kept for backwards compatibility
+        is_header: Whether this is a header row (used for Atlassian format)
+        output_format: Either FORMAT_MARKDOWN or FORMAT_ATLASSIAN
         
     Returns:
-        Markdown table row with inline formatting converted
+        Converted table row
     """
-    # Keep markdown table format, just convert inline formatting in cells
     # Remove leading/trailing pipes and split by |
     cells = [cell.strip() for cell in line.strip().strip('|').split('|')]
     
-    # Apply inline conversion to each cell and rebuild markdown table row
-    converted_cells = [convert_inline(cell) for cell in cells]
-    return '| ' + ' | '.join(converted_cells) + ' |'
+    if output_format == FORMAT_ATLASSIAN:
+        # Atlassian format: ||header1||header2|| or |cell1|cell2|
+        converted_cells = [convert_inline(cell, output_format) for cell in cells]
+        if is_header:
+            return '||' + '||'.join(converted_cells) + '||'
+        else:
+            return '|' + '|'.join(converted_cells) + '|'
+    else:
+        # Keep markdown table format
+        converted_cells = [convert_inline(cell, output_format) for cell in cells]
+        return '| ' + ' | '.join(converted_cells) + ' |'
 
 
 def is_table_separator(line: str) -> bool:
@@ -189,62 +241,90 @@ def is_table_separator(line: str) -> bool:
     return True
 
 
-def convert_line(line: str) -> str:
-    """Convert a single line of markdown to Jira markup."""
-    # Keep headers in markdown format (Jira/Confluence accepts markdown-style headers)
+def convert_line(line: str, output_format: str = FORMAT_MARKDOWN) -> str:
+    """Convert a single line of markdown to Jira markup.
+    
+    Args:
+        line: The line to convert
+        output_format: Either FORMAT_MARKDOWN or FORMAT_ATLASSIAN
+    """
+    # Headers
     header_match = re.match(r'^(#{1,6})\s*(.+)$', line)
     if header_match:
-        # Return as-is, Jira accepts markdown headers
-        return line
+        level = len(header_match.group(1))
+        content = header_match.group(2)
+        if output_format == FORMAT_ATLASSIAN:
+            return f'h{level}. {convert_inline(content, output_format)}'
+        return line  # Keep markdown format
     
-    # Convert blockquotes - keep as markdown format (> prefix)
+    # Blockquotes
     blockquote_match = re.match(r'^>\s+(.+)$', line)
     if blockquote_match:
         content = blockquote_match.group(1)
-        return f'> {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            return f'bq. {convert_inline(content, output_format)}'
+        return f'> {convert_inline(content, output_format)}'
     
-    # Keep nested ordered lists in markdown format
+    # Nested ordered lists
     nested_ordered_match = re.match(r'^(\s+)(\d+)\.\s+(.+)$', line)
     if nested_ordered_match:
         indent = nested_ordered_match.group(1)
         num = nested_ordered_match.group(2)
         content = nested_ordered_match.group(3)
-        return f'{indent}{num}. {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            # Calculate nesting level (2 spaces = 1 level typically)
+            level = max(1, len(indent) // 2)
+            return f'{"#" * (level + 1)} {convert_inline(content, output_format)}'
+        return f'{indent}{num}. {convert_inline(content, output_format)}'
     
-    # Keep ordered lists in markdown format
+    # Ordered lists
     ordered_match = re.match(r'^(\d+)\.\s+(.+)$', line)
     if ordered_match:
         num = ordered_match.group(1)
         content = ordered_match.group(2)
-        return f'{num}. {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            return f'# {convert_inline(content, output_format)}'
+        return f'{num}. {convert_inline(content, output_format)}'
     
-    # Convert GFM task lists - keep checkbox format
+    # GFM task lists
     task_match = re.match(r'^(\s*)[\-\*]\s*\[(x|X| )\]\s*(.*)$', line)
     if task_match:
         indent = task_match.group(1)
         checkbox = task_match.group(2)
         content = task_match.group(3)
-        return f'{indent}- [{checkbox}] {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            # Atlassian doesn't have native task lists, use emoji
+            status = '(/)' if checkbox.lower() == 'x' else '(x)'
+            level = max(1, len(indent) // 2)
+            return f'{"*" * (level + 1)} {status} {convert_inline(content, output_format)}'
+        return f'{indent}- [{checkbox}] {convert_inline(content, output_format)}'
     
-    # Keep nested unordered lists in markdown format
+    # Nested unordered lists
     nested_unordered_match = re.match(r'^(\s+)[\*\-]\s+(.+)$', line)
     if nested_unordered_match:
         indent = nested_unordered_match.group(1)
         content = nested_unordered_match.group(2)
-        return f'{indent}- {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            level = max(1, len(indent) // 2)
+            return f'{"*" * (level + 1)} {convert_inline(content, output_format)}'
+        return f'{indent}- {convert_inline(content, output_format)}'
     
-    # Keep unordered lists in markdown format (* or - at start of line)
+    # Unordered lists
     unordered_match = re.match(r'^[\*\-]\s+(.+)$', line)
     if unordered_match:
         content = unordered_match.group(1)
-        return f'- {convert_inline(content)}'
+        if output_format == FORMAT_ATLASSIAN:
+            return f'* {convert_inline(content, output_format)}'
+        return f'- {convert_inline(content, output_format)}'
     
-    # Keep horizontal rules in markdown format
+    # Horizontal rules
     if re.match(r'^---+$', line) or re.match(r'^\*\*\*+$', line) or re.match(r'^___+$', line):
+        if output_format == FORMAT_ATLASSIAN:
+            return '----'
         return '---'
     
     # Apply inline conversions for regular lines
-    return convert_inline(line)
+    return convert_inline(line, output_format)
 
 
 def resolve_reference_links(content: str) -> str:
@@ -293,7 +373,7 @@ def resolve_reference_links(content: str) -> str:
     return content
 
 
-def convert_content(content: str) -> str:
+def convert_content(content: str, output_format: str = FORMAT_MARKDOWN) -> str:
     """Convert markdown string to Jira markup using two-phase parsing.
     
     Phase 0: Resolve reference-style links
@@ -301,6 +381,10 @@ def convert_content(content: str) -> str:
     Phase 2: Process remaining content line by line
     
     This approach prevents code block content from being interpreted as markdown.
+    
+    Args:
+        content: The markdown content to convert
+        output_format: Either FORMAT_MARKDOWN (preserve markdown) or FORMAT_ATLASSIAN (Jira wiki markup)
     """
     # Phase 0: Resolve reference-style links to inline format
     content = resolve_reference_links(content)
@@ -308,24 +392,34 @@ def convert_content(content: str) -> str:
     code_blocks: List[str] = []
     
     def extract_fenced_code_block(match: Match) -> str:
-        """Keep fenced code blocks in markdown format."""
+        """Extract fenced code blocks."""
         lang = match.group(1) or ''
         code = match.group(2)
-        # Use placeholder that won't be matched by inline formatting patterns
         placeholder = f"<<<CODE_BLOCK_{len(code_blocks)}>>>"
-        # Keep as markdown fenced code block
-        code_blocks.append(f'```{lang}\n{code}\n```')
+        
+        if output_format == FORMAT_ATLASSIAN:
+            # Atlassian {code} format
+            if lang:
+                code_blocks.append(f'{{code:{lang}}}\n{code}\n{{code}}')
+            else:
+                code_blocks.append(f'{{code}}\n{code}\n{{code}}')
+        else:
+            # Keep as markdown fenced code block
+            code_blocks.append(f'```{lang}\n{code}\n```')
         return placeholder
     
     def extract_indented_code_block(match: Match) -> str:
-        """Convert indented code blocks to fenced code blocks."""
+        """Convert indented code blocks."""
         code = match.group(1)
         # Remove the leading 4 spaces or tab from each line
         code = re.sub(r'^ {4}|\t', '', code, flags=re.MULTILINE)
-        # Use placeholder that won't be matched by inline formatting patterns
         placeholder = f"<<<CODE_BLOCK_{len(code_blocks)}>>>"
-        # Convert to fenced code block (no language)
-        code_blocks.append(f'```\n{code}```')
+        
+        if output_format == FORMAT_ATLASSIAN:
+            code_blocks.append(f'{{code}}\n{code}{{code}}')
+        else:
+            # Convert to fenced code block (no language)
+            code_blocks.append(f'```\n{code}```')
         return placeholder
     
     # Phase 1: Extract all code blocks with placeholders
@@ -370,13 +464,14 @@ def convert_content(content: str) -> str:
             i += 1
             continue
         
-        # Check for markdown table (starts with |) - keep in markdown format
+        # Check for markdown table (starts with |)
         if line.strip().startswith('|') and line.strip().endswith('|'):
             # Look ahead for separator row to determine if this is a header
             if i + 1 < len(content_lines) and is_table_separator(content_lines[i + 1]):
-                # This is a header row - keep markdown format
-                lines.append(convert_table_row(line, is_header=True))
-                lines.append(content_lines[i + 1])  # Keep separator row
+                # This is a header row
+                lines.append(convert_table_row(line, is_header=True, output_format=output_format))
+                if output_format == FORMAT_MARKDOWN:
+                    lines.append(content_lines[i + 1])  # Keep separator row for markdown
                 i += 2
                 
                 # Process remaining table rows
@@ -384,36 +479,39 @@ def convert_content(content: str) -> str:
                     next_line = content_lines[i]
                     if next_line.strip().startswith('|') and next_line.strip().endswith('|'):
                         if not is_table_separator(next_line):
-                            lines.append(convert_table_row(next_line, is_header=False))
+                            lines.append(convert_table_row(next_line, is_header=False, output_format=output_format))
+                        elif output_format == FORMAT_MARKDOWN:
+                            lines.append(next_line)  # Keep separators in markdown
                         i += 1
                     else:
                         break
                 continue
             else:
                 # Regular table row (no header)
-                lines.append(convert_table_row(line, is_header=False))
+                lines.append(convert_table_row(line, is_header=False, output_format=output_format))
                 i += 1
                 continue
         
-        lines.append(convert_line(line))
+        lines.append(convert_line(line, output_format))
         i += 1
     
     return '\n'.join(lines)
 
 
-def convert_multiline_elements(content: str) -> str:
+def convert_multiline_elements(content: str, output_format: str = FORMAT_MARKDOWN) -> str:
     """Legacy function for backwards compatibility.
     
     This is now handled by convert_content() with two-phase parsing.
     """
-    return convert_content(content)
+    return convert_content(content, output_format)
 
 
-def markdown_to_jira(file_path: str) -> str:
+def markdown_to_jira(file_path: str, output_format: str = FORMAT_MARKDOWN) -> str:
     """Convert markdown file to Jira markup.
     
     Args:
         file_path: Path to the markdown file
+        output_format: Either FORMAT_MARKDOWN (preserve markdown) or FORMAT_ATLASSIAN (Jira wiki markup)
         
     Returns:
         Converted Jira markup as a string
@@ -421,29 +519,87 @@ def markdown_to_jira(file_path: str) -> str:
     with open(file_path, "r") as md_file:
         content = md_file.read()
     
-    return convert_content(content)
+    return convert_content(content, output_format)
+
+
+def prompt_for_format() -> str:
+    """Interactive prompt to select output format."""
+    print("\n" + "=" * 60)
+    print("Markdown to Jira Converter - Output Format Selection")
+    print("=" * 60)
+    print()
+    print("Select the output format for conversion:")
+    print()
+    print("  [1] Markdown (paste-friendly)")
+    print("      - Preserves Markdown syntax")
+    print("      - Works with Jira's native Markdown rendering")
+    print("      - Best for: Jira Cloud, newer Confluence versions")
+    print()
+    print("  [2] Atlassian Text Formatting Notation")
+    print("      - Converts to Jira wiki markup syntax")
+    print("      - Uses {code}, *bold*, _italic_, etc.")
+    print("      - Best for: Jira Server, older Confluence, Data Center")
+    print()
+    
+    while True:
+        try:
+            choice = input("Enter your choice (1 or 2): ").strip()
+            if choice == '1':
+                return FORMAT_MARKDOWN
+            elif choice == '2':
+                return FORMAT_ATLASSIAN
+            else:
+                print("Invalid choice. Please enter 1 or 2.")
+        except (KeyboardInterrupt, EOFError):
+            print("\nCancelled.")
+            sys.exit(0)
 
 
 def main():
     """Entry point for the md2jira CLI command."""
-    if len(sys.argv) < 2:
-        print("\n".join(line.strip() for line in """
-        Usage:
-        md2jira <markdown_file>
-        md2jira <markdown_file> > <jira_file>
-        md2jira <markdown_file> | pbcopy
-        """.split("\n")))
-
-        print("\n".join(line.strip() for line in """
-        Examples:
-        md2jira README.md
-        md2jira README.md > README.jira
-        md2jira README.md | pbcopy
-        """.split("\n")))
+    parser = argparse.ArgumentParser(
+        description='Convert Markdown to Jira/Confluence markup',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  md2jira README.md                    # Convert with interactive format prompt
+  md2jira README.md -f markdown        # Preserve Markdown (Jira Cloud)
+  md2jira README.md -f atlassian       # Convert to Jira wiki markup
+  md2jira README.md > README.jira      # Save output to file
+  md2jira README.md | pbcopy           # Copy to clipboard (macOS)
+        """
+    )
+    parser.add_argument(
+        'file',
+        nargs='?',
+        help='Markdown file to convert'
+    )
+    parser.add_argument(
+        '-f', '--format',
+        choices=['markdown', 'atlassian'],
+        default=None,
+        help='Output format: "markdown" (preserve Markdown for Jira Cloud) or "atlassian" (Jira wiki markup)'
+    )
+    
+    args = parser.parse_args()
+    
+    # Show help if no file provided
+    if not args.file:
+        parser.print_help()
         sys.exit(1)
-
-    markdown_file_path = sys.argv[1]
-    result = markdown_to_jira(markdown_file_path)
+    
+    # Determine output format
+    if args.format:
+        output_format = FORMAT_MARKDOWN if args.format == 'markdown' else FORMAT_ATLASSIAN
+    elif sys.stdin.isatty():
+        # Interactive mode - prompt user
+        output_format = prompt_for_format()
+        print()  # Blank line before output
+    else:
+        # Non-interactive (piped), default to markdown
+        output_format = FORMAT_MARKDOWN
+    
+    result = markdown_to_jira(args.file, output_format)
     print(result)
 
 

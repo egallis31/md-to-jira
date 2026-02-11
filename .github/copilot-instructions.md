@@ -44,8 +44,11 @@ The package is published to PyPI as `md-to-jira` and can be installed via pip. I
 - `jira_to_md.py` - Legacy script in root (still functional)
 
 ### Tests
-- `test_md_to_jira.py` - Unit tests for md_to_jira module
-- `test_jira_to_md.py` - Unit tests for jira_to_md module
+- `tests/` - Test package directory
+  - `__init__.py` - Test package marker
+  - `conftest.py` - Pytest fixtures
+  - `test_md_to_jira.py` - Unit tests for md_to_jira module
+  - `test_jira_to_md.py` - Unit tests for jira_to_md module
 
 ### Configuration
 - `pyproject.toml` - Package configuration using hatchling build system
@@ -59,23 +62,23 @@ The package is published to PyPI as `md-to-jira` and can be installed via pip. I
 
 ### Running Tests
 ```bash
-# Recommended: Install the package and run tests from /tmp to avoid import conflicts
-python3 -m build
-python3 -m pip install dist/md_to_jira-*.whl --force-reinstall
-cp test_*.py /tmp/
-cd /tmp && python3 -m unittest test_md_to_jira test_jira_to_md -v
+# Recommended: Install with dev dependencies and run pytest
+pip install -e ".[dev]"
+pytest
 
-# Alternative: Run with PYTHONPATH (may have conflicts with legacy scripts in development)
-# Note: The legacy md_to_jira.py script in the root can shadow the md_to_jira package
-# during development, causing import errors. Use the method above for reliable testing.
-PYTHONPATH=src python3 -m unittest discover -s . -p "test_*.py" -v
+# Run with coverage
+pytest --cov
+
+# Run specific test class
+pytest tests/test_md_to_jira.py::TestMdToJiraAtlassianFormat -v
 ```
 
 ### Test Framework
-- Uses Python's built-in `unittest` framework
-- No pytest or other external testing frameworks
-- Tests should be in files prefixed with `test_`
+- Uses `pytest` for testing (installed via `pip install -e ".[dev]"`)
+- Also compatible with Python's built-in `unittest` framework
+- Tests are located in `tests/` directory
 - Test imports should work with both the package structure and legacy scripts
+- Configuration in `pyproject.toml` under `[tool.pytest.ini_options]`
 
 ### Writing Tests
 - Follow the existing test patterns in `test_md_to_jira.py` and `test_jira_to_md.py`
@@ -98,15 +101,29 @@ Configuration is in `.flake8`:
 ## Command Line Interface
 
 The package provides two command-line tools after installation via pip:
-- `md2jira <file>` - Convert Markdown to JIRA/Confluence markup
-- `jira2md <file>` - Convert JIRA/Confluence markup to Markdown
+
+### md2jira - Markdown to JIRA/Confluence
+
+```bash
+md2jira <file>              # Interactive mode - prompts for format selection
+md2jira <file> -f markdown  # Preserve Markdown syntax (Jira Cloud)
+md2jira <file> -f atlassian # Convert to Atlassian notation (Jira Server)
+md2jira --help              # Show help with all options
+```
+
+**Output Formats:**
+- `markdown` - Preserves Markdown syntax for Jira Cloud/Confluence with native Markdown support
+- `atlassian` - Converts to Atlassian Text Formatting Notation for Jira Server/Data Center
+
+### jira2md - JIRA/Confluence to Markdown
+
+```bash
+jira2md <file>  # Convert to Markdown
+```
 
 Both tools:
-- Accept a file path as the first argument
 - Write output to stdout (can be redirected to a file or piped to clipboard)
-- Show usage help when run without arguments
-
-Legacy scripts in the root directory (`md_to_jira.py` and `jira_to_md.py`) remain functional for backwards compatibility.
+- Show usage help when run with `--help` or without arguments
 
 ## Package API
 
@@ -114,20 +131,40 @@ The package exports functions for programmatic use:
 
 ```python
 from md_to_jira import (
+    # Output format constants
+    FORMAT_MARKDOWN,   # 'markdown' - preserve Markdown syntax
+    FORMAT_ATLASSIAN,  # 'atlassian' - convert to Jira wiki markup
+    
     # Markdown → JIRA functions
     md_convert_line,
+    md_convert_inline,
+    md_convert_content,
     md_convert_multiline_elements,
     markdown_to_jira,
     
     # JIRA → Markdown functions
     jira_convert_line,
+    jira_convert_inline,
+    jira_convert_content,
     jira_convert_multiline_elements,
     jira_to_markdown,
     
     # Backwards-compatible aliases
     convert_line,  # alias for md_convert_line
+    convert_inline,  # alias for md_convert_inline
+    convert_content,  # alias for md_convert_content
     convert_multiline_elements,  # alias for md_convert_multiline_elements
 )
+
+# Using with format parameter
+from md_to_jira import markdown_to_jira, convert_content, FORMAT_ATLASSIAN
+
+# File-based conversion
+result = markdown_to_jira("README.md", output_format=FORMAT_ATLASSIAN)
+
+# String-based conversion
+result = convert_content("# Hello **world**", output_format=FORMAT_ATLASSIAN)
+# Returns: "h1. Hello *world*"
 ```
 
 ## Common Tasks
@@ -153,6 +190,7 @@ from md_to_jira import (
 
 ## What NOT to Do
 
+- ❌ Do not install packages to system Python - always use the `.venv` virtual environment
 - ❌ Do not add external runtime dependencies (no pip packages beyond build tools)
 - ❌ Do not use Python features newer than 3.6 (f-strings are acceptable as they were introduced in Python 3.6)
 - ❌ Do not break the command-line interface compatibility
@@ -161,6 +199,7 @@ from md_to_jira import (
 
 ## What TO Do
 
+- ✅ **Always use the `.venv` virtual environment** - Create with `python3 -m venv .venv` and activate before any development work
 - ✅ Keep the core conversion code self-contained and portable
 - ✅ Write unit tests for new functionality
 - ✅ Follow the existing code patterns
@@ -172,6 +211,42 @@ from md_to_jira import (
 - ✅ Update package exports in `__init__.py` when adding new functions
 - ✅ Keep version numbers in sync between `pyproject.toml` and `__init__.py`
 
+## Virtual Environment
+
+**IMPORTANT**: Always use a virtual environment (`.venv`) for development. This isolates dependencies and prevents conflicts with system Python packages.
+
+### Setting Up the Virtual Environment
+
+```bash
+# Create the virtual environment (if it doesn't exist)
+python3 -m venv .venv
+
+# Activate the virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+
+# On Windows:
+.venv\Scripts\activate
+
+# Verify you're in the virtual environment (should show .venv path)
+which python3  # macOS/Linux
+where python   # Windows
+```
+
+### Installing for Development
+
+```bash
+# Always activate the virtual environment first!
+source .venv/bin/activate  # macOS/Linux
+
+# Install in editable mode with dev dependencies
+pip install -e ".[dev]"
+
+# This installs:
+# - The md-to-jira package in editable mode
+# - pytest and pytest-cov for testing
+```
+
 ## Building and Running
 
 ### For Development (from source)
@@ -181,19 +256,25 @@ from md_to_jira import (
 git clone https://github.com/eshack94/md-to-jira.git
 cd md-to-jira
 
-# Run tests directly (set PYTHONPATH to include src/)
-PYTHONPATH=src python3 -m unittest discover -s . -p "test_*.py" -v
+# Create and activate virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Or install in development mode (optional)
-pip install -e .
+# Install with dev dependencies
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov
 ```
 
 ### Building the Package
 
 ```bash
-# Optional: Create and activate a virtual environment
-python3 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Ensure virtual environment is active
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
 # Install build tools
 pip install build
@@ -207,16 +288,18 @@ python -m build
 ### Using the Package
 
 ```bash
-# Install from PyPI
+# For development (in virtual environment)
+source .venv/bin/activate
+pip install -e ".[dev]"
+
+# Or install from PyPI (in any environment)
 pip install md-to-jira
 
 # Use command-line tools
-md2jira <markdown_file>
-jira2md <jira_file>
-
-# Or use legacy scripts (without installation)
-python3 md_to_jira.py <markdown_file>
-python3 jira_to_md.py <jira_file>
+md2jira <markdown_file>                # Interactive format selection
+md2jira <markdown_file> -f markdown    # Preserve Markdown (Jira Cloud)
+md2jira <markdown_file> -f atlassian   # Atlassian notation (Jira Server)
+jira2md <jira_file>                    # Convert JIRA to Markdown
 ```
 
 ## Packaging and Releases

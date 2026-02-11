@@ -329,5 +329,72 @@ class TestMdToJiraFileConversion(unittest.TestCase):
             self.assertEqual(result, expected_output)
 
 
+class TestMdToJiraAtlassianFormat(unittest.TestCase):
+    """Test Atlassian Text Formatting Notation output."""
+
+    def test_headers_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_line('# Header', FORMAT_ATLASSIAN), 'h1. Header')
+        self.assertEqual(convert_line('## Header', FORMAT_ATLASSIAN), 'h2. Header')
+        self.assertEqual(convert_line('### Header', FORMAT_ATLASSIAN), 'h3. Header')
+
+    def test_bold_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_inline('**bold**', FORMAT_ATLASSIAN), '*bold*')
+        self.assertEqual(convert_inline('__bold__', FORMAT_ATLASSIAN), '*bold*')
+
+    def test_strikethrough_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_inline('~~deleted~~', FORMAT_ATLASSIAN), '-deleted-')
+
+    def test_inline_code_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_inline('`code`', FORMAT_ATLASSIAN), '{{code}}')
+
+    def test_links_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(
+            convert_inline('[text](http://example.com)', FORMAT_ATLASSIAN),
+            '[text|http://example.com]'
+        )
+
+    def test_images_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(
+            convert_inline('![alt](http://example.com/img.png)', FORMAT_ATLASSIAN),
+            '!http://example.com/img.png|alt=alt!'
+        )
+
+    def test_lists_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_line('- item', FORMAT_ATLASSIAN), '* item')
+        self.assertEqual(convert_line('1. item', FORMAT_ATLASSIAN), '# item')
+
+    def test_blockquote_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_line('> quote', FORMAT_ATLASSIAN), 'bq. quote')
+
+    def test_horizontal_rule_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(convert_line('---', FORMAT_ATLASSIAN), '----')
+
+    def test_code_block_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        result = convert_content('```python\nprint("hi")\n```', FORMAT_ATLASSIAN)
+        self.assertIn('{code:python}', result)
+        self.assertIn('{code}', result)
+
+    def test_table_atlassian(self):
+        from md_to_jira.md_to_jira import FORMAT_ATLASSIAN
+        self.assertEqual(
+            convert_table_row('| Header 1 | Header 2 |', is_header=True, output_format=FORMAT_ATLASSIAN),
+            '||Header 1||Header 2||'
+        )
+        self.assertEqual(
+            convert_table_row('| Cell 1 | Cell 2 |', is_header=False, output_format=FORMAT_ATLASSIAN),
+            '|Cell 1|Cell 2|'
+        )
+
+
 if __name__ == '__main__':
     unittest.main()
